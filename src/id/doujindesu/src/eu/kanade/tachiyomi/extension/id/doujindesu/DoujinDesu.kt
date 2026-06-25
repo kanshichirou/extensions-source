@@ -31,7 +31,7 @@ import org.jsoup.nodes.Element
 import java.text.SimpleDateFormat
 import java.util.Locale
 
-private const val DOMAIN = "doujindesu.tv"
+private const val DOMAIN = "doujin.desu.xxx"
 
 class DoujinDesu :
     HttpSource(),
@@ -61,10 +61,10 @@ class DoujinDesu :
 
     private fun parseMangaFromElement(element: Element): SManga = SManga.create().apply {
         element.selectFirst("a")?.let {
-            title = element.selectFirst("h3.title")?.text() ?: ""
+            title = element.selectFirst("h3")?.text() ?: ""
             setUrlWithoutDomain(it.attr("abs:href"))
         }
-        element.selectFirst("a > figure.thumbnail > img")?.let {
+        element.selectFirst("img")?.let {
             thumbnail_url = imageFromElement(it)
         }
     }
@@ -80,31 +80,31 @@ class DoujinDesu :
 
     // Popular
 
-    override fun popularMangaRequest(page: Int): Request = GET("$baseUrl/manhwa/page/$page/", headers)
+    override fun popularMangaRequest(page: Int): Request = GET("$baseUrl/manga/?type=Manhwa&page=$page", headers)
 
     override fun popularMangaParse(response: Response): MangasPage {
         val document = response.asJsoup()
-        val mangas = document.select("#archives > div.entries > article").map(::parseMangaFromElement)
-        val hasNextPage = document.selectFirst("nav.pagination > ul > li.last > a") != null
+        val mangas = document.select("article").map(::parseMangaFromElement)
+        val hasNextPage = document.selectFirst("a[href*='page=']:contains(Next), nav a[href*='page=']:last-child") != null
         return MangasPage(mangas, hasNextPage)
     }
 
     // Latest
 
-    override fun latestUpdatesRequest(page: Int): Request = GET("$baseUrl/doujin/page/$page/", headers)
+    override fun latestUpdatesRequest(page: Int): Request = GET("$baseUrl/manga/?page=$page", headers)
 
     override fun latestUpdatesParse(response: Response): MangasPage {
         val document = response.asJsoup()
-        val mangas = document.select("#archives > div.entries > article").map(::parseMangaFromElement)
-        val hasNextPage = document.selectFirst("nav.pagination > ul > li.last > a") != null
+        val mangas = document.select("article").map(::parseMangaFromElement)
+        val hasNextPage = document.selectFirst("a[href*='page=']:contains(Next), nav a[href*='page=']:last-child") != null
         return MangasPage(mangas, hasNextPage)
     }
 
     // Search & Filter
 
     override fun searchMangaRequest(page: Int, query: String, filters: FilterList): Request {
-        val baseUrlWithPage = if (page == 1) "$baseUrl/" else "$baseUrl/page/$page/"
-        val finalUrl = if (query.isNotBlank()) "$baseUrlWithPage?s=${query.replace(" ", "+")}" else baseUrlWithPage
+        val baseUrlWithPage = if (page == 1) "$baseUrl/manga/" else "$baseUrl/manga/?page=$page"
+        val finalUrl = if (query.isNotBlank()) "$baseUrl/manga/?s=${query.replace(" ", "+")}&page=$page" else baseUrlWithPage
 
         val agsFilter = filters.firstInstanceOrNull<AuthorGroupSeriesFilter>()
         val agsValueFilter = filters.firstInstanceOrNull<AuthorGroupSeriesValueFilter>()
@@ -114,9 +114,9 @@ class DoujinDesu :
         if (query.isBlank() && selectedOption != null && selectedOption.key.isNotBlank()) {
             val typePath = selectedOption.key
             val url = if (filterValue.isBlank()) {
-                if (page == 1) "$baseUrl/$typePath/" else "$baseUrl/$typePath/page/$page/"
+                if (page == 1) "$baseUrl/$typePath/" else "$baseUrl/$typePath/?page=$page"
             } else {
-                if (page == 1) "$baseUrl/$typePath/$filterValue/" else "$baseUrl/$typePath/$filterValue/page/$page/"
+                if (page == 1) "$baseUrl/$typePath/$filterValue/" else "$baseUrl/$typePath/$filterValue/?page=$page"
             }
             return GET(url, headers)
         }
@@ -125,8 +125,8 @@ class DoujinDesu :
 
     override fun searchMangaParse(response: Response): MangasPage {
         val document = response.asJsoup()
-        val mangas = document.select("#archives > div.entries > article").map(::parseMangaFromElement)
-        val hasNextPage = document.selectFirst("nav.pagination > ul > li.last > a") != null
+        val mangas = document.select("article").map(::parseMangaFromElement)
+        val hasNextPage = document.selectFirst("a[href*='page=']:contains(Next), nav a[href*='page=']:last-child") != null
         return MangasPage(mangas, hasNextPage)
     }
 
