@@ -1,0 +1,24 @@
+name: Build individual modules
+on:
+  workflow_dispatch:
+    inputs:
+      module:
+        description: "Module to build (e.g. doujindesu)"
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: temurin
+      - uses: gradle/actions/setup-gradle@v3
+      - name: Build module
+        run: ./gradlew :extensions:individual:src-id-${{ github.event.inputs.module }}:assembleRelease
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.inputs.module }}-apk
+          path: "**/*.apk"
